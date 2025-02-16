@@ -1,10 +1,14 @@
-import { computed, ComputedRef, reactive, ref } from "vue"
-
-
+import { reactive, ref} from "vue"
 
 const useStore = () => {
-    return { }
+    /**Изображение для обрезки */
+    const image = ref<HTMLImageElement>(new Image());
+
+    /**Обрезанное изображение */
+    const croppedImage = ref();
+
+    return({image, croppedImage});
 }
 
-const store = reactive(useStore())
-export { store }
+const store = reactive(useStore());
+export { store };

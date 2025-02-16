@@ -1,0 +1,1 @@
+export {default as Croper} from './croper.vue';

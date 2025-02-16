@@ -1,28 +1,30 @@
 <script lang="ts" setup>
-import { Container, Footer, Header } from '@/components';
-import { NotFound } from './pages';
-import { computed } from 'vue';
+import { Croper } from '@/components';
+import { ref } from 'vue';
 import { store } from './store';
 
-window.addEventListener('hashchange', () => {
-    store.currentPath = window.location.hash
-})
+/**Объект кропера для взаимодействия с ним и использования встроенных функций*/
+const $croper = ref();
+
+/**Скачивание изображения*/
+const downloadImage = () => {
+    const link = document.createElement('a');
+    link.href = store.croppedImage;
+    link.download = 'cropped-image.png';
+    link.click();
+};
 </script>
 
 <template>
-    <Header />
-    <RouterView class="content" ></RouterView>
-    <Footer class="footer"></Footer>
+    <Croper ref="$croper"></Croper>
+
+    <input type="file" @change="$croper.loadImage" accept="image/png, image/gif, image/jpeg" />
+    <button v-if="store.image.src != ''" @click="$croper.cropImage">Обрезать</button>
+
+    <div v-if="store.croppedImage">
+        <h3>Обрезанное изображение:</h3>
+        <img :src="store.croppedImage" alt="Cropped Image" />
+        <br>
+        <button v-if="store.croppedImage" @click="downloadImage">Скачать</button>
+    </div>
 </template>
-
-<style lang="scss" scoped>
-.content {
-    height: 100%;
-}
-
-.footer {
-    bottom: 0;
-    position: static;
-    height: auto;
-}
-</style>
