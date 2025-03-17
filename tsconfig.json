@@ -42,7 +42,7 @@
     "tests/**/*.tsx",
     "node_modules/**/*.ts",
     "node_modules/**/*.vue"
-  ],
+, "src/tests/unit/Croper.test.js"  ],
   "exclude": [
     "node_modules"
   ]

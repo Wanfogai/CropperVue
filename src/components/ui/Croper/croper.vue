@@ -1,166 +1,278 @@
 <script lang="ts" setup>
-import { store } from '@/app/store';
-import { ref, onMounted, nextTick, onUnmounted } from 'vue';
-import SelectionModel from './models/SelectionModel';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { SelectionModel } from './models';
+import { CropData } from './interfaces';
+import { MyInput } from '../MyInput';
 
-//Пропсы :
-//Ограничения размера изображения
-const props = defineProps({
-    limination_width: { type: Number, default: 0 },
-    limitation_height: { type: Number, default: 0 }
+/**Объект ref компонента Input для взаимодействия с ним*/
+const $fileInput = ref<HTMLInputElement>();
+/**Объект ref компонента Image для взаимодействия с ним*/
+const $imageRef = ref<HTMLImageElement>();
+/**Картинка в байтовом представлении для загрузки в компонент <img>*/
+const imageSrc = ref<string>();
+/**Blob дата обрезанного изображения для скачивания и предпросмотра*/
+const croppedImage = ref<string>();
+
+/**Объект выделения для отрисовки*/
+const selection = ref<SelectionModel>(new SelectionModel(50, 50, 150, 150));
+
+/**Стиль области выделения для перемещения и изменения размера*/
+const selectionStyle = computed(() => ({
+  left: selection.value.x + 'px',
+  top: selection.value.y + 'px',
+  width: selection.value.width + 'px',
+  height: selection.value.height + 'px',
+}))
+
+const resizeHandles = ref([
+  { position: 'top-left', direction: 'nw' },
+  { position: 'top-right', direction: 'ne' },
+  { position: 'bottom-left', direction: 'sw' },
+  { position: 'bottom-right', direction: 'se' },
+  { position: 'top', direction: 'n' },
+  { position: 'bottom', direction: 's' },
+  { position: 'left', direction: 'w' },
+  { position: 'right', direction: 'e' },
+]);
+
+/** Загрузка изображения*/
+const loadImage = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e: ProgressEvent<FileReader>) => {
+    imageSrc.value = e.target?.result as string;
+    croppedImage.value = undefined;
+  };
+  reader.readAsDataURL(file);
+};
+
+const getCropData = (): { X: number; Y: number; Height: number; Width: number } => {
+  return {
+    X: selection.value.x,
+    Y: selection.value.y,
+    Height: selection.value.height,
+    Width: selection.value.width,
+  };
+};
+
+/** Функция обрезки изображения*/
+async function cropImage(ImageData: string, SelectionData: CropData) {
+  if (!ImageData || !SelectionData) throw new Error("Требуются вводные данные");
+  //Данные отправляемые на сервер
+  const toServer = {
+    image: ImageData,
+    crop: SelectionData,
+  };
+  //Отправка fetch запроса для получения обрезанного изображения
+  const response = await fetch("/api/crop", {
+    method: "POST",
+    body: JSON.stringify(toServer),
+    headers: { "Content-Type": "application/json" },
+  });
+  //Ошибка при подключении к серверу или обрезки изображения
+  if (!response.ok) {
+    throw new Error("Ошибка при обрезке изображения");
+  }
+
+  const result = await response.json();
+
+  croppedImage.value = result.croppedImage;
+  return response.json();
+};
+
+/** Функция для скачивания обрезанного изображения*/
+const downloadImage = () => {
+  if (!croppedImage.value) return;
+
+  const link = document.createElement('a');
+  link.href = croppedImage.value;
+  link.download = 'cropped-image.png';
+  link.click();
+};
+
+/**Ограничения выделения внутри изображения*/
+
+
+/**Начало перемещения выделенной области*/
+const startDrag = (event: MouseEvent) => {
+  selection.value.dragging = true;
+  selection.value.startX = event.clientX - selection.value.x;
+  selection.value.startY = event.clientY - selection.value.y;
+};
+
+/** Перемещение выделенной области*/
+const moveSelection = (event: MouseEvent) => {
+  if (!selection.value.dragging || !$imageRef.value) return;
+
+  const imgRect = $imageRef.value.getBoundingClientRect();
+  selection.value.x = Math.max(0, Math.min(event.clientX - (selection.value.startX ?? 0), imgRect.width - selection.value.width));
+  selection.value.y = Math.max(0, Math.min(event.clientY - (selection.value.startY ?? 0), imgRect.height - selection.value.height));
+};
+
+/** Остановка действий (перемещения и изменения размера)*/
+const stopActions = () => {
+  selection.value.dragging = false;
+  selection.value.resizing = false;
+  document.removeEventListener('mousemove', moveSelection);
+  document.removeEventListener('mousemove', resizeSelection);
+  document.removeEventListener('mouseup', stopActions);
+};
+
+/** Начало изменения размера*/
+const startResize = (event: MouseEvent, direction: string) => {
+  selection.value.resizing = true;
+  selection.value.resizeDirection = direction;
+  selection.value.startX = event.clientX;
+  selection.value.startY = event.clientY;
+  selection.value.startWidth = selection.value.width;
+  selection.value.startHeight = selection.value.height;
+  document.addEventListener('mousemove', resizeSelection);
+  document.addEventListener('mouseup', stopActions);
+};
+
+
+/** Изменение размера выделенной области*/
+const resizeSelection = (event: MouseEvent) => {
+  if (!selection.value.resizing || !$imageRef.value) return;
+
+  const imgRect = $imageRef.value.getBoundingClientRect();
+  const dx = event.clientX - (selection.value.startX ?? 0);
+  const dy = event.clientY - (selection.value.startY ?? 0);
+
+  if (selection.value.resizeDirection?.includes('e')) {
+    selection.value.width = Math.min(imgRect.width - selection.value.x, (selection.value.startWidth ?? 0) + dx);
+  }
+  if (selection.value.resizeDirection?.includes('w')) {
+    selection.value.x = Math.max(0, selection.value.x + dx);
+    selection.value.width = Math.max(10, (selection.value.startWidth ?? 0) - dx);
+  }
+  if (selection.value.resizeDirection?.includes('s')) {
+    selection.value.height = Math.min(imgRect.height - selection.value.y, (selection.value.startHeight ?? 0) + dy);
+  }
+  if (selection.value.resizeDirection?.includes('n')) {
+    selection.value.y = Math.max(0, selection.value.y + dy);
+    selection.value.height = Math.max(10, (selection.value.startHeight ?? 0) - dy);
+  }
+};
+
+
+
+// Добавление обработчиков событий
+onMounted(() => {
+  document.addEventListener('mousemove', moveSelection);
+  document.addEventListener('mousemove', resizeSelection);
+  document.addEventListener('mouseup', stopActions);
 });
 
-/**Высвобождение переменных ограничения для облегченного использования */
-const { limination_width, limitation_height } = props;  
+// Удаление обработчиков при удалении компонента
+onUnmounted(() => {
+  document.removeEventListener('mousemove', moveSelection);
+  document.removeEventListener('mousemove', resizeSelection);
+  document.removeEventListener('mouseup', stopActions);
+});
 
-/**Ref компонент канваса для взаимодействия с ним */
-const $canvas = ref<HTMLCanvasElement>();
-
-/**Объект Context 2d для отрисовки */
-const ctx = ref();
-
-/**Параметры выделенной области*/
-const selection = ref<SelectionModel>(new SelectionModel(50, 50, 75, 75, false, false));
-
-/**Загрузка изображения
- *  Подключаеться к компоненту Input через  @change
-*/
-const loadImage = (event: Event) => {
-
-    const input = (event.target as HTMLInputElement);
-    if (!input.files) return;
-    const file = input.files[0];
-
-    //Проверка не пустой ли файл и существует ли изображение
-    if (store.image.src = "") return;
-
-    /**Ридер для файла изображения */
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-        store.image = new Image();
-        if (e.target?.result) store.image.src = e.target.result.toString();
-        store.image.onload = () => {
-            //Проверка  заданы ли ограничения и соответствует ли им изображение 
-            if (limination_width > 0 && store.image.width > limination_width || limitation_height > 0 && store.image.height > limitation_height) {
-                alert("Изображение слишком большое");
-                store.image = new Image();
-                input.value = '';
-            }
-            else {
-                $canvas.value!.width = store.image?.width;
-                $canvas.value!.height = store.image?.height
-                console.log(`w:${store.image?.width}\nh:${store.image?.height}`)
-                drawCanvas()
-            }
-        };
-    };
-
-    reader.readAsDataURL(file);
-};
-
-/**Отрисовка на canvas*/
-const drawCanvas = () => {
-    if (!$canvas.value || !store.image) return;
-    ctx.value = $canvas.value.getContext('2d');
-    ctx.value.clearRect(0, 0, $canvas.value.width, $canvas.value.height);
-
-    // Отрисовка изображения
-    ctx.value.drawImage(store.image, 0, 0, $canvas.value.width, $canvas.value.height);
-
-    // Рисуем облатсть кропера
-    ctx.value.strokeStyle = 'red';
-    ctx.value.lineWidth = 2;
-    ctx.value.strokeRect(selection.value.x, selection.value.y, selection.value.width, selection.value.height);
-
-    // Рисуем квадрат для маштабирования
-    const handleSize = 10;
-    ctx.value.fillStyle = 'blue';
-    ctx.value.fillRect(selection.value.x + selection.value.width - handleSize / 2, selection.value.y + selection.value.height - handleSize / 2, handleSize, handleSize);
-};
-
-/**Обрезка изображения
- * Подключаеться к кнопке или друкому компоненту выполняющий функцию "Обрезать"
-*/
-const cropImage = () => {
-    if (!$canvas.value || !store.image) return;
-
-    /**Временный канвас для создания обрезанного изображения */
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = selection.value.width;
-    tempCanvas.height = selection.value.height;
-    /**Контекст временного канваса для отрисовки изображения */
-    const tempCtx = tempCanvas.getContext('2d');
-
-    tempCtx?.drawImage(
-        store.image,
-        selection.value.x * (store.image.width / $canvas.value.width),
-        selection.value.y * (store.image.height / $canvas.value.height),
-        selection.value.width * (store.image.width / $canvas.value.width),
-        selection.value.height * (store.image.height / $canvas.value.height),
-        0, 0, selection.value.width, selection.value.height
-    );
-
-    /**Сохранение вырезанного элемента в виде Blob для возможности скачивания */
-    store.croppedImage = tempCanvas.toDataURL();
-};
-
-
-/**Управление выделением (задание координат и проверка)*/
-const startDrag = (event: MouseEvent) => {
-    const handleSize = 10;
-    const offsetX = event.offsetX;
-    const offsetY = event.offsetY;
-    /**Высвобождение переменных из модели выделения для уменьшения кода  */
-    const { x, y, width, height } = selection.value;
-
-    // Проверяем, нажали ли на квадратик для изменения размера
-    if (offsetX >= x + width - handleSize && offsetY >= y + height - handleSize) {
-        selection.value.resizing = true;
-    } else {
-        selection.value.dragging = true;
-    }
-};
-
-/**Отключение перетаскивания при отпускании кнопки мыши */
-const stopDrag = () => {
-    selection.value.dragging = false;
-    selection.value.resizing = false;
-};
-
-/**Управление выделением (перемещение и изменение размера) */
-const moveSelection = (event: MouseEvent) => {
-    if (store.image && store.image.src != "") {
-        if (selection.value.dragging && $canvas.value) {
-            selection.value.x = Math.max(0, Math.min(event.offsetX - selection.value.width / 2, $canvas.value.width - selection.value.width));
-            selection.value.y = Math.max(0, Math.min(event.offsetY - selection.value.height / 2, $canvas.value.height - selection.value.height));
-        } else if (selection.value.resizing) {
-            const newWidth = event.offsetX - selection.value.x;
-            const newHeight = event.offsetY - selection.value.y;
-            if (newWidth > 10 && newHeight > 10) {
-                selection.value.width = newWidth;
-                selection.value.height = newHeight;
-            }
-        }
-        drawCanvas();
-    }
-};
-
-/**Высвоюождение функций загрузки и ибрезки изображения для использования во внешних компонентах */
-defineExpose({ loadImage, cropImage });
-
+defineExpose({ cropImage, croppedImage, imageSrc, getCropData })
 </script>
 
 <template>
-    <div>
-        <canvas ref="$canvas" @mousedown="startDrag" @mouseup="stopDrag" @mousemove="moveSelection">
-        </canvas>
+  <MyInput ref="$fileInput" @load-image="loadImage"></MyInput>
+  <br>
+  <div v-if="imageSrc" class="image-container">
+    <img ref="$imageRef" :src="imageSrc" class="image" />
+    <div class="selection" :style="selectionStyle" @mousedown="startDrag">
+
+      <div v-for="handle in resizeHandles" :key="handle.position" dropzone="Hello" class="resize-handle"
+        :class="handle.position" @mousedown.stop="(e) => startResize(e, handle.direction)"></div>
     </div>
+  </div>
+
+  <button @click="cropImage(imageSrc, getCropData())" v-if="imageSrc">Обрезать</button>
+
+  <div v-if="croppedImage">
+    <h3>Обрезанное изображение:</h3>
+    <img :src="croppedImage" alt="Cropped Image" />
+    <button @click="downloadImage">Скачать</button>
+  </div>
+
 </template>
 
-<style lang="scss" scoped>
-canvas {
-    border: 1px solid #ccc;
-    cursor: crosshair;
+<style scoped>
+.image-container {
+  user-select: none;
+  position: relative;
+  display: inline-block;
+}
+
+.image {
+  max-width: 100%;
+  height: auto;
+}
+
+.selection {
+  position: absolute;
+  border: 2px dashed red;
+  cursor: move;
+}
+
+.resize-handle {
+  width: 10px;
+  height: 10px;
+  background: blue;
+  position: absolute;
+}
+
+.top-left {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+
+.top-right {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+
+.bottom-left {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+
+.bottom-right {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
+}
+
+.top {
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: n-resize;
+}
+
+.bottom {
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: s-resize;
+}
+
+.left {
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: w-resize;
+}
+
+.right {
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: e-resize;
 }
 </style>

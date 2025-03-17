@@ -1,1 +1,2 @@
-export * from './Croper';
+export * from './Croper'
+export * from './MyInput'
