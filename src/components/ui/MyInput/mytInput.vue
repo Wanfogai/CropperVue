@@ -1,17 +1,60 @@
 <script lang="ts" setup>
+import { onMounted, onUnmounted, defineEmits, ref } from 'vue'
 
 const emit = defineEmits([
-    'loadImage'
+    'files-dropped'
+
 ])
+
+
+const $fileInput = ref<HTMLInputElement>()
+
+const $dropZone = ref<HTMLDivElement>()
+
+let active = ref(false)
+
+function setActive() {
+    active.value = true
+}
+function setInactive() {
+    active.value = false
+}
+
+function clickLoad(input: Event) {
+    const files = (input.target as HTMLInputElement)
+    emit('files-dropped', [...files?.files])
+}
+
+function onDrop(e) {
+
+    setInactive() // add this line too
+    emit('files-dropped', [...e.dataTransfer.files])
+}
+
+
 
 </script>
 <template>
-    <input type="file" @change="emit('loadImage', $event)" v-text="'Hello'" />
+    <input type="file" ref="$fileInput" style="display: none;" @change="clickLoad">
+    <div class="drop_zone" ref="$dropZone" @drop.prevent="onDrop" :data-active="active" @dragenter.prevent="setActive"
+        @dragover.prevent="setActive" @dragleave.prevent="setInactive" @click="$fileInput?.click()">
+        Нажмите для выбора файла<br>или<br>переместите в зону сюда
+    </div>
 
-    <div class="drop_zone"></div>
 </template>
 <style lang="css" scoped>
-.drop_zone{
-    
+.drop_zone {
+    background: gray;
+    border: black 2px dashed;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+
+    cursor: pointer;
+
+    width: 250px;
+    height: 150px;
 }
 </style>

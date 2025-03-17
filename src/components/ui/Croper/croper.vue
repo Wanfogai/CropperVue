@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { SelectionModel } from './models';
 import { CropData } from './interfaces';
 import { MyInput } from '../MyInput';
+import { watch } from 'fs';
 
 /**Объект ref компонента Input для взаимодействия с ним*/
 const $fileInput = ref<HTMLInputElement>();
@@ -15,6 +16,8 @@ const croppedImage = ref<string>();
 
 /**Объект выделения для отрисовки*/
 const selection = ref<SelectionModel>(new SelectionModel(50, 50, 150, 150));
+
+const preView = ref();
 
 /**Стиль области выделения для перемещения и изменения размера*/
 const selectionStyle = computed(() => ({
@@ -36,9 +39,8 @@ const resizeHandles = ref([
 ]);
 
 /** Загрузка изображения*/
-const loadImage = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
+const loadImage = (e) => {
+  const file = e[0];
   if (!file) return;
 
   const reader = new FileReader();
@@ -55,6 +57,33 @@ const getCropData = (): { X: number; Y: number; Height: number; Width: number } 
     Y: selection.value.y,
     Height: selection.value.height,
     Width: selection.value.width,
+  };
+};
+
+const PreImage = () => {
+  if (!imageSrc.value || !$imageRef.value) return;
+
+  const img = new Image();
+  img.src = imageSrc.value;
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = selection.value.width;
+    canvas.height = selection.value.height;
+    const ctx = canvas.getContext('2d');
+
+    if (ctx && $imageRef.value) {
+      const scaleX = img.naturalWidth / $imageRef.value.width;
+      const scaleY = img.naturalHeight / $imageRef.value.height;
+
+      ctx.drawImage(
+        img,
+        selection.value.x * scaleX, selection.value.y * scaleY,
+        selection.value.width * scaleX, selection.value.height * scaleY,
+        0, 0, selection.value.width, selection.value.height
+      );
+
+      preView.value = canvas.toDataURL('image/png');
+    }
   };
 };
 
@@ -174,11 +203,13 @@ onUnmounted(() => {
   document.removeEventListener('mouseup', stopActions);
 });
 
+watch(selection, () => { })
+
 defineExpose({ cropImage, croppedImage, imageSrc, getCropData })
 </script>
 
 <template>
-  <MyInput ref="$fileInput" @load-image="loadImage"></MyInput>
+  <MyInput ref="$fileInput" @load-image="loadImage" @files-dropped="loadImage"></MyInput>
   <br>
   <div v-if="imageSrc" class="image-container">
     <img ref="$imageRef" :src="imageSrc" class="image" />
@@ -189,12 +220,15 @@ defineExpose({ cropImage, croppedImage, imageSrc, getCropData })
     </div>
   </div>
 
+
+
+
   <button @click="cropImage(imageSrc, getCropData())" v-if="imageSrc">Обрезать</button>
 
   <div v-if="croppedImage">
     <h3>Обрезанное изображение:</h3>
-    <img :src="croppedImage" alt="Cropped Image" />
-    <button @click="downloadImage">Скачать</button>
+    <img :src="preView" alt="Cropped Image" />
+    <!-- <button @click="downloadImage">Скачать</button> -->
   </div>
 
 </template>
