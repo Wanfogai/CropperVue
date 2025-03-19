@@ -1,6 +1,6 @@
 
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
-import { mount } from '@vue/test-utils'
+import {DOMWrapper, mount} from '@vue/test-utils'
 import { Croper } from '@/components';
 import { SelectionModel } from '@/components';
 import { CropperExposed } from './TestedModels';
@@ -91,8 +91,14 @@ describe('Cropper', () => {
         await wrapper.vm.$nextTick();
         console.log('Rendered HTML:', wrapper.html()); // Для отладки
 
-        // Поиск первой кнопки ("Обрезать")
-        const button = wrapper.find('button');
+        // Поиск кнопки ("Обрезать")
+        let button = new DOMWrapper<HTMLButtonElement>(null);
+        wrapper.findAll('button').forEach((buttons) => {
+            if (buttons.text() == "Обрезать") button = buttons;
+        })
+
+        console.log(button.text());
+
         expect(button.exists()).toBe(true);
 
         // Эмуляция клика

@@ -6,7 +6,6 @@ const emit = defineEmits([
 
 ])
 
-
 const $fileInput = ref<HTMLInputElement>()
 
 const $dropZone = ref<HTMLDivElement>()
@@ -21,12 +20,12 @@ function setInactive() {
 }
 
 function clickLoad(input: Event) {
-    const files = (input.target as HTMLInputElement)
-    emit('files-dropped', [...files?.files])
+    const inputElement = (input.target as HTMLInputElement)
+    if (inputElement.files)
+        emit('files-dropped', [...inputElement.files])
 }
 
-function onDrop(e) {
-
+function onDrop(e: any) {
     setInactive() // add this line too
     emit('files-dropped', [...e.dataTransfer.files])
 }
@@ -35,7 +34,7 @@ function onDrop(e) {
 
 </script>
 <template>
-    <input type="file" ref="$fileInput" style="display: none;" @change="clickLoad">
+    <input type="file" ref="$fileInput" style="display: none;" accept="image/png, image/jpeg, image/jpg"  @change="clickLoad">
     <div class="drop_zone" ref="$dropZone" @drop.prevent="onDrop" :data-active="active" @dragenter.prevent="setActive"
         @dragover.prevent="setActive" @dragleave.prevent="setInactive" @click="$fileInput?.click()">
         Нажмите для выбора файла<br>или<br>переместите в зону сюда
