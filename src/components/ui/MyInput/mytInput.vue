@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, defineEmits, ref } from 'vue'
+import {file} from "@babel/types";
+import {extension} from "mime";
 
 const emit = defineEmits([
     'files-dropped'
@@ -26,8 +28,16 @@ function clickLoad(input: Event) {
 }
 
 function onDrop(e: any) {
+   const sadad =[ ...e.dataTransfer.files]
+    sadad.forEach(file => {
+     if (file.extension != "png" || file.extension != "jpg" || file.extension != "jpeg") {
+       console.log(file.extension)
+       alert("Не верный тип файла")
+       return null;
+     }
+   })
     setInactive() // add this line too
-    emit('files-dropped', [...e.dataTransfer.files])
+    emit('files-dropped', sadad)
 }
 
 
