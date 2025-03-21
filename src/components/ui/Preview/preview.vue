@@ -1,26 +1,27 @@
 <script lang="ts" setup>
 
 import {computed} from "vue";
-import {SelectionModel} from "@/components";
-import anymatch from "anymatch";
+
 
 const props = defineProps({
   src: String,
   alt: {type: String, default: 'Превью'},
   selection:{type:Object},
-})
+  zoom:{type: Number,default:1},
+});
 
 
 const previewContainerStyle = computed(() => ({
-  width: props.selection?.width+'px',
-  height: props.selection?.height+'px'
-}))
+  width: (props.selection?.width / props.zoom) + 'px',
+  height: (props.selection?.height / props.zoom) + 'px',
+}));
 
+console.log(props.selection?.height )
 
 const previewImageStyle = computed(() => ({
-  top: -props.selection?.y + 'px',
-  left: -props.selection?.x + 'px',
-}))
+  top: -props.selection?.y /  props.zoom + 'px',
+  left: -props.selection?.x /  props.zoom + 'px',
+}));
 </script>
 
 <template>
@@ -39,7 +40,7 @@ const previewImageStyle = computed(() => ({
 
 .preview-image {
   position: absolute;
-  /* Позиционируем изображение так, чтобы обрезать нужную область */
+
   left: 0;
   top: 0;
 }

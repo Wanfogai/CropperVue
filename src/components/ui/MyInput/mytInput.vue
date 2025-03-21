@@ -1,46 +1,31 @@
 <script lang="ts" setup>
-import { onMounted, onUnmounted, defineEmits, ref } from 'vue'
-import {file} from "@babel/types";
-import {extension} from "mime";
+import {defineEmits, ref} from 'vue'
 
 const emit = defineEmits([
     'files-dropped'
+]);
 
-])
 
-const $fileInput = ref<HTMLInputElement>()
+const $fileInput = ref<HTMLInputElement>();
 
-const $dropZone = ref<HTMLDivElement>()
+const $dropZone = ref<HTMLDivElement>();
 
-let active = ref(false)
+const active = ref(false);
 
-function setActive() {
-    active.value = true
-}
-function setInactive() {
-    active.value = false
-}
+const setActive = () => active.value = true;
+const setInactive = () => active.value = false;
 
 function clickLoad(input: Event) {
-    const inputElement = (input.target as HTMLInputElement)
+  const inputElement = (input.target as HTMLInputElement);
     if (inputElement.files)
-        emit('files-dropped', [...inputElement.files])
+      emit('files-dropped', [...inputElement.files]);
 }
 
 function onDrop(e: any) {
-   const sadad =[ ...e.dataTransfer.files]
-    sadad.forEach(file => {
-     if (file.extension != "png" || file.extension != "jpg" || file.extension != "jpeg") {
-       console.log(file.extension)
-       alert("Не верный тип файла")
-       return null;
-     }
-   })
-    setInactive() // add this line too
-    emit('files-dropped', sadad)
+  const files = [...e.dataTransfer.files];
+  setInactive();
+  emit('files-dropped', files);
 }
-
-
 
 </script>
 <template>

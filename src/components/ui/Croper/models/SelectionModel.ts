@@ -14,6 +14,7 @@ export class SelectionModel {
     height: number;
     dragging: boolean = false;
     resizing: boolean = false;
+    zoom :number = 1;
     startX?: number;
     startY?: number;
     startWidth?: number;

@@ -19,6 +19,21 @@ const selection = ref<SelectionModel>(new SelectionModel(0, 0, 50, 50));
 
 const preView = ref();
 
+const startImageSize = ref<{ width: number, height: number }>({
+  width: 0,
+  height: 0,
+})
+
+
+const constSize = () => {
+  if (!$imageRef.value) return;
+  startImageSize.value.height = $imageRef.value.height;
+  startImageSize.value.width = $imageRef.value.width;
+  console.log(startImageSize.value)
+}
+
+const zoom = ref(1);
+
 /**Стиль области выделения для перемещения и изменения размера*/
 const selectionStyle = computed(() => ({
   left: selection.value.x + 'px',
@@ -49,7 +64,9 @@ const loadImage = (e: object) => {
     imageSrc.value = e.target?.result as string;
     croppedImage.value = undefined;
   };
+
   reader.readAsDataURL(file);
+
 };
 
 const getCropData = (): { X: number; Y: number; Height: number; Width: number } => {
@@ -60,34 +77,6 @@ const getCropData = (): { X: number; Y: number; Height: number; Width: number } 
     Width: selection.value.width,
   };
 };
-
-const PreImage = () => {
-  if (!imageSrc.value || !$imageRef.value) return;
-
-  const img = new Image();
-  img.src = imageSrc.value;
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = selection.value.width;
-    canvas.height = selection.value.height;
-    const ctx = canvas.getContext('2d');
-
-    if (ctx && $imageRef.value) {
-      const scaleX = img.naturalWidth / $imageRef.value.width;
-      const scaleY = img.naturalHeight / $imageRef.value.height;
-
-      ctx.drawImage(
-        img,
-        selection.value.x * scaleX, selection.value.y * scaleY,
-        selection.value.width * scaleX, selection.value.height * scaleY,
-        0, 0, selection.value.width, selection.value.height
-      );
-      delete (preView.value)
-      preView.value = canvas;
-    }
-  };
-};
-
 
 /** Функция обрезки изображения*/
 async function cropImage(ImageData: string, SelectionData: CropData) {
@@ -124,8 +113,13 @@ const downloadImage = () => {
   link.click();
 };
 
-/**Ограничения выделения внутри изображения*/
+const increaseZoom = () => {
+  zoom.value = Number(Math.min(zoom.value + 0.1, 3).toFixed(1));
+};
 
+const decreaseZoom = () => {
+  zoom.value = Number(Math.max(zoom.value - 0.1, 0.5).toFixed(1));
+};
 
 /**Начало перемещения выделенной области*/
 const startDrag = (event: MouseEvent) => {
@@ -148,6 +142,12 @@ const stopActions = () => {
   selection.value.dragging = false;
   selection.value.resizing = false;
 };
+
+const previewImageStyle = computed(() => ({
+  transform: `scale(${zoom.value})`,
+  transformOrigin: 'center', // или '0 0', в зависимости от того, как ты хочешь масштабировать
+}));
+
 
 const cancaleCrop = () => {
   imageSrc.value = '';
@@ -225,8 +225,10 @@ const resizeSelection = (event: MouseEvent) => {
   selection.value.height = newHeight;
 };
 
+
 // Добавление обработчиков событий
 onMounted(() => {
+  console.log(startImageSize.value);
   document.addEventListener('mousemove', moveSelection);
   document.addEventListener('mousemove', resizeSelection);
   document.addEventListener('mouseup', stopActions);
@@ -240,14 +242,19 @@ onUnmounted(() => {
 });
 
 
-defineExpose({cropImage, croppedImage, imageSrc, getCropData, selection})
+defineExpose({cropImage, croppedImage, imageSrc, getCropData, selection});
 </script>
 
 <template>
   <MyInput v-if="!imageSrc" ref="$fileInput" @load-image="loadImage" @files-dropped="loadImage"></MyInput>
   <br>
   <div v-if="imageSrc" class="image-container">
-    <img ref="$imageRef" :src="imageSrc" class="image" />
+    <img ref="$imageRef" :src="imageSrc" class="image" :style="previewImageStyle" @load="constSize"/>
+    <div>
+      <button @click="decreaseZoom">-</button>
+      <span>Zoom: {{ zoom.toFixed(1) }}</span>
+      <button @click="increaseZoom">+</button>
+    </div>
     <div class="selection" :style="selectionStyle" @mousedown="startDrag">
 
 
@@ -257,7 +264,7 @@ defineExpose({cropImage, croppedImage, imageSrc, getCropData, selection})
   </div>
 
 
-  <Preview v-if="imageSrc" :src="imageSrc" alt="Превью" :selection="selection"></Preview>
+  <Preview v-if="imageSrc" :src="imageSrc" alt="Превью" :selection="selection" :zoom="zoom"></Preview>
 
   <div class="control">
     <button @click="cancaleCrop" v-if="imageSrc">Отменить</button>
@@ -267,8 +274,8 @@ defineExpose({cropImage, croppedImage, imageSrc, getCropData, selection})
 
   <div v-if="croppedImage">
     <h3>Обрезанное изображение:</h3>
-
-    <!-- <button @click="downloadImage">Скачать</button> -->
+    <img :src="croppedImage" alt="Обрезанное изображение">
+    <button @click="downloadImage">Скачать</button>
   </div>
 
 </template>
