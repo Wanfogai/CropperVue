@@ -32,7 +32,7 @@ function onDrop(e: any) {
     <input type="file" ref="$fileInput" style="display: none;" accept="image/png, image/jpeg, image/jpg"  @change="clickLoad">
     <div class="drop_zone" ref="$dropZone" @drop.prevent="onDrop" :data-active="active" @dragenter.prevent="setActive"
         @dragover.prevent="setActive" @dragleave.prevent="setInactive" @click="$fileInput?.click()">
-        Нажмите для выбора файла<br>или<br>переместите в зону сюда
+        Нажмите для выбора файла<br>или<br>переместите его сюда
     </div>
 
 </template>

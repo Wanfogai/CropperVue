@@ -6,28 +6,37 @@ import {computed} from "vue";
 const props = defineProps({
   src: String,
   alt: {type: String, default: 'Превью'},
+  height: {type: Number, default: 0},
+  width: {type: Number, default: 0},
+  nonStretch: {type: Boolean, default: 0},
   selection:{type:Object},
-  zoom:{type: Number,default:1},
 });
 
 
 const previewContainerStyle = computed(() => ({
-  width: (props.selection?.width / props.zoom) + 'px',
-  height: (props.selection?.height / props.zoom) + 'px',
+  width: props.selection?.width + 'px',
+  height: props.selection?.height + 'px',
 }));
-
-console.log(props.selection?.height )
 
 const previewImageStyle = computed(() => ({
-  top: -props.selection?.y /  props.zoom + 'px',
-  left: -props.selection?.x /  props.zoom + 'px',
+  width: props.width > 0 && props.nonStretch ? props.width + 'px' : 'auto',
+  height: props.height > 0 && props.nonStretch ? props.height + 'px' : 'auto',
+  top: -props.selection?.y + 'px',
+  left: -props.selection?.x + 'px',
 }));
+
+const previewStyle = computed(() => ({
+  width:  props.width + 'px',
+  height:  props.height + 'px' ,
+}))
 </script>
 
 <template>
  <br> <label>Предпросмотр : </label>
   <div class="preview-container" :style="previewContainerStyle">
-    <img ref="previewImage" :style="previewImageStyle" :src="props.src" class="preview-image"/>
+    <div class="preview-image" :style="props.nonStretch?previewStyle:''" >
+      <img ref="previewImage" :style="previewImageStyle" :src="props.src" class="preview-image" alt=""/>
+    </div>
   </div>
 
 </template>
