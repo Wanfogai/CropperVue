@@ -9,5 +9,5 @@ import {Croper} from '@/components';
   non-stretch(true, false) -если false размер будет применен к контейнеру а не к изображению и изображение не будет растянуто
   max-width, max-height - ограничения размера изображения(если изображение не соответствует то выведется сообщение об ошибке )
   -->
-  <Croper :height="600" :non-stretch="true" :width="1000"/>
+  <Croper  />
 </template>

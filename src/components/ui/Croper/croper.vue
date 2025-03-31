@@ -8,7 +8,6 @@ import {Preview} from "@/components";
 const props = defineProps({
   width: {type: Number, default: 0},
   height: {type: Number, default: 0},
-  nonStretch: {type: Boolean, default: false},
   maxWidth: {type: Number, default: 0},
   maxHeight: {type: Number, default: 0},
 })
@@ -28,9 +27,9 @@ const selection = ref<SelectionModel>(new SelectionModel(0, 0, 50, 50));
 
 /**Стиль изменения размера изображения в зависимости от настроек если включен nonStretch применяется к контейнеру, а не к фото*/
 const imageStyle = computed(() => ({
-  width: !props.nonStretch ? (props.width > 0 ? props.width + 'px' : 'auto') : '',
-  height: !props.nonStretch ? (props.height > 0 ? props.height + 'px' : 'auto') : 'auto',
-  maxWidth: props.nonStretch ? props.width + 'px' : 'auto',
+  width: (props.width > 0 ? props.width + 'px' : 'auto') ,
+  height: (props.height > 0 ? props.height + 'px' : 'auto'),
+  maxWidth: props.width + 'px',
 }))
 
 /**Стиль области выделения для перемещения и изменения размера*/
@@ -238,7 +237,6 @@ defineExpose({cropImage, croppedImage, imageSrc, getCropData, selection});
     </div>
   </div>
 
-
   <Preview v-if="imageSrc" :src="imageSrc"
            :max-width="props.maxWidth" :max-height="props.maxHeight"
            :height="props.height" :width="props.width"
@@ -250,18 +248,9 @@ defineExpose({cropImage, croppedImage, imageSrc, getCropData, selection});
     <button @click="cancaleCrop" v-if="imageSrc">Отменить</button>
     <button @click="cropImage(imageSrc, getCropData())" v-if="imageSrc">Обрезать</button>
   </div>
-
-
-  <div v-if="croppedImage">
-    <h3>Обрезанное изображение:</h3>
-    <img :src="croppedImage" alt="Обрезанное изображение">
-    <button @click="downloadImage">Скачать</button>
-  </div>
-
 </template>
 
 <style scoped>
-
 
 .image-container {
   user-select: none;
