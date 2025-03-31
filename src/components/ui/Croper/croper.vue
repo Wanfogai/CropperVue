@@ -13,7 +13,6 @@ const props = defineProps({
   maxHeight: {type: Number, default: 0},
 })
 
-
 /**Объект ref компонента Input для взаимодействия с ним*/
 const $fileInput = ref<HTMLInputElement>();
 /**Объект ref компонента Image для взаимодействия с ним*/
@@ -27,9 +26,11 @@ const croppedImage = ref<string>();
 const selection = ref<SelectionModel>(new SelectionModel(0, 0, 50, 50));
 
 
+/**Стиль изменения размера изображения в зависимости от настроек если включен nonStretch применяется к контейнеру, а не к фото*/
 const imageStyle = computed(() => ({
-  width: (props.width > 0 ? props.width + 'px' : 'auto'),
-  height: (props.height > 0 ? props.height + 'px' : 'auto'),
+  width: !props.nonStretch ? (props.width > 0 ? props.width + 'px' : 'auto') : '',
+  height: !props.nonStretch ? (props.height > 0 ? props.height + 'px' : 'auto') : 'auto',
+  maxWidth: props.nonStretch ? props.width + 'px' : 'auto',
 }))
 
 /**Стиль области выделения для перемещения и изменения размера*/
@@ -40,6 +41,7 @@ const selectionStyle = computed(() => ({
   height: selection.value.height + 'px',
 }))
 
+/**Направления ресайза для рендера*/
 const resizeHandles = ref([
   { position: 'top-left', direction: 'nw' },
   { position: 'top-right', direction: 'ne' },
@@ -49,7 +51,7 @@ const resizeHandles = ref([
   { position: 'bottom', direction: 's' },
   { position: 'left', direction: 'w' },
   { position: 'right', direction: 'e' },
-]);
+])
 
 /** Загрузка изображения*/
 const loadImage = (e: object) => {
@@ -62,8 +64,9 @@ const loadImage = (e: object) => {
     croppedImage.value = undefined;
   };
   reader.readAsDataURL(file);
-};
+}
 
+/**Получение данных кропа для передачи на сервер*/
 const getCropData = (): { X: number; Y: number; Height: number; Width: number } => {
   return {
     X: selection.value.x,
@@ -71,7 +74,7 @@ const getCropData = (): { X: number; Y: number; Height: number; Width: number } 
     Height: selection.value.height,
     Width: selection.value.width,
   };
-};
+}
 
 /** Функция обрезки изображения*/
 async function cropImage(ImageData: string, SelectionData: CropData) {
@@ -81,12 +84,14 @@ async function cropImage(ImageData: string, SelectionData: CropData) {
     image: ImageData,
     crop: SelectionData,
   };
-  //Отправка fetch запроса для получения обрезанного изображения
+
+  /***Отправка fetch запроса для получения обрезанного изображения*/
   const response = await fetch("/api/crop", {
     method: "POST",
     body: JSON.stringify(toServer),
     headers: { "Content-Type": "application/json" },
   });
+
   //Ошибка при подключении к серверу или обрезки изображения
   if (!response.ok) {
     throw new Error("Ошибка при обрезке изображения");
@@ -96,7 +101,7 @@ async function cropImage(ImageData: string, SelectionData: CropData) {
 
   croppedImage.value = result.croppedImage;
   return response.json();
-};
+}
 
 /** Функция для скачивания обрезанного изображения*/
 const downloadImage = () => {
@@ -106,14 +111,14 @@ const downloadImage = () => {
   link.href = croppedImage.value;
   link.download = 'cropped-image.png';
   link.click();
-};
+}
 
 /**Начало перемещения выделенной области*/
 const startDrag = (event: MouseEvent) => {
   selection.value.dragging = true;
   selection.value.startX = event.clientX - selection.value.x;
   selection.value.startY = event.clientY - selection.value.y;
-};
+}
 
 /** Перемещение выделенной области*/
 const moveSelection = (event: MouseEvent) => {
@@ -128,12 +133,12 @@ const moveSelection = (event: MouseEvent) => {
 const stopActions = () => {
   selection.value.dragging = false;
   selection.value.resizing = false;
-};
+}
 
-
+/**функция отмены кропа перехода к выбору файла*/
 const cancaleCrop = () => {
   imageSrc.value = '';
-  selection.value = new SelectionModel(0,0,50,50)
+  selection.value = new SelectionModel(0, 0, 50, 50);
 }
 
 /** Начало изменения размера*/
@@ -146,20 +151,9 @@ const startResize = (event: MouseEvent, direction: string) => {
   selection.value.startHeight = selection.value.height;
   document.addEventListener('mousemove', resizeSelection);
   document.addEventListener('mouseup', stopActions);
-};
+}
 
-
-/** Изменение размера выделенной области*/
-const startResizing = (event: MouseEvent) => {
-  if (!$imageRef.value) return;
-
-  selection.value.startX = selection.value.x;
-  selection.value.startY = selection.value.y;
-  selection.value.startWidth = selection.value.width;
-  selection.value.startHeight = selection.value.height;
-  selection.value.resizing = true;
-};
-
+/**Функция ресайза кропера*/
 const resizeSelection = (event: MouseEvent) => {
   if (!selection.value.resizing || !$imageRef.value) return;
 
@@ -204,8 +198,9 @@ const resizeSelection = (event: MouseEvent) => {
   selection.value.y = newY;
   selection.value.width = newWidth;
   selection.value.height = newHeight;
-};
+}
 
+///Наблюдатель для предотвращения рендера изображений превышающих ограничения и вывода сообщения об ошибке
 watch($imageRef, () => {
   if (imageSrc.value == '') return
   if (($imageRef.value!.height > props.maxHeight || $imageRef.value!.width > props.maxWidth) && (props.maxHeight > 0 && props.maxWidth > 0)) {
@@ -219,14 +214,14 @@ onMounted(() => {
   document.addEventListener('mousemove', moveSelection);
   document.addEventListener('mousemove', resizeSelection);
   document.addEventListener('mouseup', stopActions);
-});
+})
 
 // Удаление обработчиков при удалении компонента
 onUnmounted(() => {
   document.removeEventListener('mousemove', moveSelection);
   document.removeEventListener('mousemove', resizeSelection);
   document.removeEventListener('mouseup', stopActions);
-});
+})
 
 
 defineExpose({cropImage, croppedImage, imageSrc, getCropData, selection});
@@ -238,7 +233,6 @@ defineExpose({cropImage, croppedImage, imageSrc, getCropData, selection});
   <div v-if="imageSrc" class="image-container" :style="props.nonStretch? imageStyle:''">
     <img ref="$imageRef" :style="!props.nonStretch? imageStyle:''" :src="imageSrc" class="image"/>
     <div class="selection" :style="selectionStyle" @mousedown="startDrag">
-
       <div v-for="handle in resizeHandles" :key="handle.position" class="resize-handle"
         :class="handle.position" @mousedown.stop="(e) => startResize(e, handle.direction)"></div>
     </div>
