@@ -1,13 +1,36 @@
 <script lang="ts" setup>
-import {Croper} from '@/components';
+import {Cropper} from "@/components/widget/Croper";
+import {CustomInput} from "@/components";
+import {ref, watch} from "vue";
+
+const image = ref<string>('')
+
+const files = ref<File[]>();
+
+const loadImage = (e: File[]) => {
+  const file = e[0];
+
+  const reader = new FileReader();
+  reader.onload = (e: ProgressEvent<FileReader>) => {
+    image.value = e.target?.result as string;
+
+  };
+  reader.readAsDataURL(file);
+}
+
+watch(files,() => {
+  if (!files.value)return;
+    loadImage(files.value);
+})
+
 </script>
 
 <template>
+  <CustomInput v-model="files"></CustomInput>
 
   <!-- Параметры кропера
-  width,height - значения для фиксированного размера всех изображения(изображения будут растянуты до заданного размера)
-  non-stretch(true, false) -если false размер будет применен к контейнеру а не к изображению и изображение не будет растянуто
-  max-width, max-height - ограничения размера изображения(если изображение не соответствует то выведется сообщение об ошибке )
-  -->
-  <Croper  />
+width,height - значения для фиксированного размера всех изображения(изображения будут растянуты до заданного размера)
+max-width, max-height - ограничения размера изображения(если изображение не соответствует то выведется сообщение об ошибке )
+-->
+  <Cropper :image="image"></Cropper>
 </template>

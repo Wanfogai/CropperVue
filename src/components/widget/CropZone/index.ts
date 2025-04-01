@@ -1,0 +1,1 @@
+export {default as CropZone} from './cropZone.vue';
