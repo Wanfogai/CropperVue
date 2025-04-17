@@ -48,7 +48,6 @@ const cropperStyle = computed(() => {
     height: `${props.height}px`,
 
     boxShadow: `0 0 0 ${maxDimension}px ${props.overlayColor}`,
-
     cursor: 'move',
     pointerEvents: 'auto',
 
@@ -75,7 +74,7 @@ const getOffSetTop = computed(() => {
   <div ref="$cropContainer" :style="containerStyle" class="crop-zone-container">
     <drag-adrop :offset-left="getOffSetLeft" :offset-top="getOffSetTop">
       <div :style="cropperStyle" class="cropper-handle">
-        <Point v-for="item in resizePointsId"  :handle-id="item" ></Point>
+        <Point v-for="item in handles"  :handle-id="item.id" ></Point>
       </div>
     </drag-adrop>
   </div>
