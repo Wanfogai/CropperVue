@@ -23,14 +23,24 @@ watch(files,() => {
     loadImage(files.value);
 })
 
+
+const cancelCrop = () => {
+  image.value = ''
+  files.value = undefined;
+}
 </script>
 
 <template>
-  <CustomInput v-model="files"></CustomInput>
+  <CustomInput v-if="!image" v-model="files"></CustomInput>
 
   <!-- Параметры кропера
 width,height - значения для фиксированного размера всех изображения(изображения будут растянуты до заданного размера)
 max-width, max-height - ограничения размера изображения(если изображение не соответствует то выведется сообщение об ошибке )
 -->
   <Cropper :image="image"></Cropper>
+  <div v-if="image" class="control">
+    <button>Обрезать</button>
+    <button @click="cancelCrop">Отмена</button>
+  </div>
+
 </template>

@@ -1,20 +1,20 @@
 <script lang="ts" setup>
 import {computed, ref} from 'vue';
-import {PositionModel} from "@/components/ui/Drag&Drop/models/PositionModel";
+import {PositionModel} from './models/PositionModel';
 
-/**HTML елементы DragWrap */
+/**HTML элемент DragWrap */
 const $dragWraper = ref<HTMLDivElement>()
-
 
 /**Стиль курсора при перетаскивании*/
 const cursorStyle = ref<HTMLStyleElement>()
+
 /**Позиция карты относительно страницы */
 const screenPos = ref<PositionModel>()
 
 const props = defineProps({
   canDrag: {
     type: Boolean, default: true
-  }
+  },
 })
 
 //Переменные расчета начальной точки перемещения
@@ -25,10 +25,8 @@ const offsetY = ref()
 const isDrag = computed(() => {
   emit('drag', !!$dragWraper.value)
 
-
   return !!$dragWraper.value
 })
-
 
 const emit = defineEmits<{
   drag: [isDrag: boolean],
@@ -42,12 +40,7 @@ const onMouseDragDowm = (event: MouseEvent) => {
   if (!$dragWraper.value) return
   screenPos.value = new PositionModel($dragWraper.value.getBoundingClientRect());
 
-  //добавление класса "пустой к оригиналу"
-  $dragWraper.value.classList.add("empty")
-
-  //Создание клона карточки
-//$dragWraper
- $dragWraper.value.classList.add('dragging');
+  $dragWraper.value.classList.add('dragging');
 
   //Задание начальной позиции
   if (!screenPos.value) return
@@ -65,14 +58,13 @@ const onMouseDragDowm = (event: MouseEvent) => {
   cursorStyle.value.id = "cursorStyle"
 
   //Добавление клона на страницу и присваивание ему эвентов
-  document.body.appendChild($dragWraper.value)
   document.head.appendChild(cursorStyle.value);
-  document.addEventListener('mouseup', onMouseDargUp)
+  document.addEventListener('mouseup', onMouseDragUp)
   document.addEventListener('mousemove', onMouseDragMove)
 
 }
 
-const onMouseDargUp = (event: MouseEvent) => {
+const onMouseDragUp = (event: MouseEvent) => {
 
   //Удаление класса "пустой" у оригинала
   if (!$dragWraper.value) return
@@ -82,7 +74,7 @@ const onMouseDargUp = (event: MouseEvent) => {
   cursorStyle.value?.remove();
 
   //Удаление евентов
-  document.removeEventListener('mouseup', onMouseDargUp)
+  document.removeEventListener('mouseup', onMouseDragUp)
   document.removeEventListener('mousemove', onMouseDragMove)
 
 }
@@ -98,28 +90,22 @@ const onMouseDragMove = (event: MouseEvent) => {
 
 <template>
   <div ref="$dragWraper" class="drag-zone" @mousedown="onMouseDragDowm" @mouseup="emit('drop')">
-    <slot v-if="!isDrag"/>
+    <slot/>
   </div>
 </template>
 
 <style lang="scss" scoped>
-.empty {
-  background-color: blueviolet;
-  width: 322px;
-  height: 572px;
-}
 
 .drag-zone {
+  position: absolute;
   cursor: grab;
   outline: none;
   user-select: none;
-  z-index: 9999;
 }
 </style>
 
 <style lang="scss">
 .dragging {
-  position: fixed;
   pointer-events: none;
   z-index: 100000;
 }

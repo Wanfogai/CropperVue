@@ -1,1 +1,1 @@
-export {default as DragADrop} from  './drag&drop.vue';
+export {default as DragADrop} from './dragAdrop.vue';
