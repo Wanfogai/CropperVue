@@ -1,1 +1,1 @@
-// export * from './TestCropperModel'
+export * from './TestCropperModel'

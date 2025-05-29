@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-import {defineEmits, ref} from 'vue'
+import {ref} from 'vue'
 
+/**Переменная для двусторонней привязки (v-model), содержит выбранные файлы*/
 const model = defineModel()
 
 /**Переменная input элемента для взаимодействия*/
@@ -12,11 +13,11 @@ const $dropZone = ref<HTMLDivElement>();
 /**Переменная определяющая активность зоны дропа*/
 const active = ref(false);
 
-//Функции меняющие активность дропа
+//Функции, меняющие активность дропа
 const setActive = () => active.value = true;
 const setInactive = () => active.value = false;
 
-/**Функция использующая $fileInput вызывающая выбор файла**/
+/**Функция, использующая $fileInput, вызывающая выбор файла**/
 function clickLoad(input: Event) {
   const inputElement = (input.target as HTMLInputElement);
     if (inputElement.files)
@@ -29,16 +30,16 @@ function onDrop(e: any) {
   setInactive();
   model.value = files;
 }
-
 </script>
+
 <template>
     <input type="file" ref="$fileInput" style="display: none;" accept="image/png, image/jpeg, image/jpg"  @change="clickLoad">
     <div class="drop_zone" ref="$dropZone" @drop.prevent="onDrop" :data-active="active" @dragenter.prevent="setActive"
         @dragover.prevent="setActive" @dragleave.prevent="setInactive" @click="$fileInput?.click()">
         Нажмите для выбора файла<br>или<br>переместите его сюда
     </div>
-
 </template>
+
 <style lang="css" scoped>
 .drop_zone {
     background: gray;
